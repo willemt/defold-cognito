@@ -1,0 +1,34 @@
+- name: cognito
+  type: table
+  desc: Functions and constants for working with AWS cognito
+        Supported on Android and iOS
+
+#*****************************************************************************************************
+
+  - name: init
+    type: function
+    desc: Initialize.
+    parameters:
+      - name: poolId
+        type: string
+        desc: Cognito User Pool ID, eg. "ap-southeast-2_2CoZGoXCz"
+
+      - name: clientId
+        type: string
+        desc: Cognito User Pool Client ID, eg. "7l2s7l3h8i1d901nqg9ao7cbin"
+
+      - name: region
+        type: string
+        desc: AWS region, eg. "ap-southeast-2"
+
+  - name: login
+    type: function
+    desc: Log the user in
+    parameters:
+      - name: userId
+        type: string
+        desc: User's ID, most commonly their email
+
+      - name: password
+        type: string
+        desc: User's password

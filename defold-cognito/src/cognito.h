@@ -1,0 +1,10 @@
+#if defined(DM_PLATFORM_HTML5) || defined(DM_PLATFORM_ANDROID) || defined(DM_PLATFORM_IOS)
+
+#ifndef DM_COGNITO_EXTENSION
+#define DM_COGNITO_EXTENSION
+
+// NOTE: Also defined in CognitoJNI.java
+
+#endif // DM_COGNITO_EXTENSION
+
+#endif // DM_PLATFORM_HTML5 || DM_PLATFORM_ANDROID || DM_PLATFORM_IOS

@@ -1,0 +1,29 @@
+[bootstrap]
+main_collection = /main/main.collectionc
+
+[script]
+shared_state = 1
+
+[display]
+width = 640
+height = 1136
+
+[android]
+input_method = HiddenInputField
+package = com.defold.extension.cognito
+version_code = 7
+target_sdk_version = 29
+
+[project]
+title = defold-cognito
+dependencies#0 = https://github.com/Insality/druid/archive/master.zip
+
+[library]
+include_dirs = defold-cognito
+
+[ios]
+bundle_identifier = com.defold.extension.cognito
+
+[osx]
+bundle_identifier = com.defold.extension.cognito
+

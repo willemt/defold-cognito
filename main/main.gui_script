@@ -1,0 +1,237 @@
+local druid = require("druid.druid")
+
+local LOG = {}
+
+local function log(fmt, ...)
+	if not fmt then return end
+	local line = fmt:format(...)
+	print(line)
+	table.insert(LOG, line)
+	if #LOG > 10 then
+		table.remove(LOG, 1)
+	end
+	local s = table.concat(LOG, "\n")
+	gui.set_text(gui.get_node("log"), s)
+end
+
+local function enable_widget(node)
+	gui.set_color(gui.get_node(node), vmath.vector4(1,1,1,1))
+end
+
+local function disable_widget(node)
+	gui.set_color(gui.get_node(node), vmath.vector4(0.5,0.5,0.5,0.5))
+end
+
+
+local function processCognitoError(self, error)
+	log(error.code)
+	if error.code == "UsernameExistsException" then
+		-- Signup error: 
+		-- show error: do you want to login?
+		-- show error: user already exists!
+	elseif error.code == "InvalidPasswordException" then
+		-- Login error: password not strong enough
+	elseif error.code == "UserNotConfirmedException" then
+		-- User needs to be confirmed. Most likely hasn't finished sign up yet
+		-- show email confirmation modal
+		enable_widget("confirmSignUpCodeButton")
+		enable_widget("codeButton")
+		enable_widget("resendConfirmationCodeButton")
+	elseif error.code == "NotAuthorizedException" then
+		if error.message == "User cannot be confirmed. Current status is CONFIRMED" then
+			-- Probably a duplicate call to confirmSignUp()
+			print("DOUBLE UP")
+		end
+		-- Loging error: password is wrong
+	elseif error.code == "CodeMismatchException" then
+		-- user entered a bad email confirmation code
+	elseif error.code == "ExpiredCodeException" then
+		-- user entered an old code (password confirm or confirmation)
+	elseif error.code == "CognitoParameterInvalidException" then
+		
+	else
+		print("ERRROR")
+		print(error.code)
+	end
+end
+
+local function login_callback(self, result, error)
+	pprint(result)
+	pprint(error)
+	if result and result.attributes then
+		pprint(result.attributes)
+	end
+
+	if error then
+		processCognitoError(self, error)
+		return
+	end
+
+	if result.signedOut then
+		enable_widget("emailButton")
+		enable_widget("passwordButton")
+		enable_widget("loginButton")
+		enable_widget("signUpButton")
+		disable_widget("signOutButton")
+		disable_widget("globalSignOutButton")
+		enable_widget("forgotPasswordButton")
+	elseif result.getAuthenticationDetails then
+		-- We need to log in
+		-- TODO: show login modal
+		self.emailInput:set_text(result.userId)
+		log("result.getAuthenticationDetails")
+		enable_widget("passwordButton")
+		enable_widget("loginButton")
+		enable_widget("forgotPasswordButton")
+	elseif result.getResetCode then
+		-- user clicked the Forgot Password button and we need the reset code window
+		log("result.getResetCode")
+		enable_widget("codeButton")
+		enable_widget("confirmForgotPasswordCodeButton")
+	else
+		self.emailInput:set_text(result.attributes.email)
+
+		disable_widget("codeButton")
+		disable_widget("emailButton")
+		disable_widget("passwordButton")
+		disable_widget("loginButton")
+		disable_widget("signUpButton")
+		enable_widget("signOutButton")
+		enable_widget("globalSignOutButton")
+		disable_widget("forgotPasswordButton")
+		disable_widget("confirmSignUpCodeButton")
+		disable_widget("confirmForgotPasswordCodeButton")
+		disable_widget("resendConfirmationCodeButton")
+	end
+end
+
+local function resendConfirmationCodeButtonSuccess(self, result, error)
+	if error then
+		processCognitoError(self, error)
+		return
+	end
+
+	log("Code resent")
+end
+
+local function confirmSignUpCodeButtonSuccess(self, result, error)
+	if error then
+		processCognitoError(self, error)
+		return
+	end
+
+	log("signup confirmed")
+
+	-- Now we auto login on the user's behalf
+	local email = gui.get_text(gui.get_node("emailText"))
+	local pw = self.passwordInput:get_text()
+	if not cognito.login(email, pw, login_callback) then
+		log("bad parameters")
+	end
+end
+
+local function loginButtonCallback(self)
+	local email = gui.get_text(gui.get_node("emailText"))
+	local pw = self.passwordInput:get_text()
+	if not cognito.login(email, pw, login_callback) then
+		log("bad parameters")
+	end
+end
+
+local function signOutButtonCallback(self)
+	cognito.signOut()
+
+	enable_widget("emailButton")
+	enable_widget("passwordButton")
+	enable_widget("loginButton")
+	enable_widget("signUpButton")
+	disable_widget("signOutButton")
+	disable_widget("globalSignOutButton")
+	enable_widget("forgotPasswordButton")
+	disable_widget("resendConfirmationCodeButton")
+end
+
+local function globalSignOutButtonCallback(self)
+	cognito.globalSignOut(login_callback)
+end
+
+local function signUpButtonCallback(self)
+	local email = self.emailInput:get_text()
+	local pw = self.passwordInput:get_text()
+	cognito.signUp(email, pw, login_callback)
+end
+
+local function forgotPasswordButtonCallback(self)
+	local email = self.emailInput:get_text()
+	cognito.forgotPassword(email, login_callback)
+end
+
+local function confirmSignUpCodeButtonCallback(self)
+	local email = self.emailInput:get_text()
+	local code = self.codeInput:get_text()
+	cognito.confirmSignUp(email, code, confirmSignUpCodeButtonSuccess)
+end
+
+local function confirmForgotPasswordCodeButtonCallback(self)
+	local code = self.codeInput:get_text()
+	local pw = self.passwordInput:get_text()
+	local email = self.emailInput:get_text()
+	cognito.confirmPassword(email, pw, code, login_callback)
+end
+
+local function resendConfirmationCodeButtonCallback(self)
+	local email = self.emailInput:get_text()
+	cognito.resendConfirmationCode(email, resendConfirmationCodeButtonSuccess)
+end
+
+function final(self)
+	self.druid:final()
+end
+
+function update(self, dt)
+	self.druid:update(dt)
+end
+
+function on_message(self, message_id, message, sender)
+	self.druid:on_message(message_id, message, sender)
+end
+
+function on_input(self, action_id, action)
+	self.druid:on_input(action_id, action)
+end
+
+function init(self)
+	self.log = {}
+
+	disable_widget("codeButton")
+	disable_widget("loginButton")
+	disable_widget("signUpButton")
+	disable_widget("signOutButton")
+	disable_widget("globalSignOutButton")
+	disable_widget("forgotPasswordButton")
+	disable_widget("confirmSignUpCodeButton")
+	disable_widget("confirmForgotPasswordCodeButton")
+	disable_widget("resendConfirmationCodeButton")
+
+	self.druid = druid.new(self)
+
+	self.emailInput = self.druid:new_input("emailButton", "emailText", gui.KEYBOARD_TYPE_EMAIL)
+	self.passwordInput = self.druid:new_input("passwordButton", "passwordText", gui.KEYBOARD_TYPE_PASSWORD)
+	self.codeInput = self.druid:new_input("codeButton", "codeText", gui.KEYBOARD_TYPE_NUMBER_PAD)
+	self.druid:new_button("loginButton", loginButtonCallback)
+	self.druid:new_button("signUpButton", signUpButtonCallback)
+	self.druid:new_button("signOutButton", signOutButtonCallback)
+	self.druid:new_button("globalSignOutButton", globalSignOutButtonCallback)
+	self.druid:new_button("forgotPasswordButton", forgotPasswordButtonCallback)
+	self.druid:new_button("confirmSignUpCodeButton", confirmSignUpCodeButtonCallback)
+	self.druid:new_button("confirmForgotPasswordCodeButton", confirmForgotPasswordCodeButtonCallback)
+	self.druid:new_button("resendConfirmationCodeButton", resendConfirmationCodeButtonCallback)
+	
+	if not cognito then
+		log("Cognito not supported on this platform")
+		return
+	end
+
+	cognito.init("POOLID", "CLIENTID", "REGION")
+	cognito.getSession(login_callback)
+end

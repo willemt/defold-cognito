@@ -1,0 +1,5 @@
+name: CognitoExt
+platforms:
+    arm64-ios:
+        context:
+            linkFlags:  ['-ObjC', '-Wl,-rpath,@executable_path/Frameworks']

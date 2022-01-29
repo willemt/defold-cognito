@@ -1,0 +1,15 @@
+android {
+    compileSdkVersion 31
+    compileOptions {
+    }
+
+    defaultConfig {
+        minSdkVersion 15 
+        targetSdkVersion 28
+    }
+}
+
+dependencies {
+    implementation 'com.amazonaws:aws-android-sdk-cognitoauth:2.37.1'
+    implementation 'com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.37.1'
+}
